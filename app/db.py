@@ -1,10 +1,44 @@
+"""Database utilities for the C2C backend."""
+from __future__ import annotations
+
+from contextlib import contextmanager
+from typing import Generator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-DB_URL = "mysql+pymysql://c2c_user:439611@127.0.0.1:3306/c2c?charset=utf8mb4"
+from app.config import get_settings
 
-engine = create_engine(DB_URL, pool_pre_ping=True)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 class Base(DeclarativeBase):
-    pass
+    """Base class for all ORM models."""
+
+
+settings = get_settings()
+engine = create_engine(settings.db_url, echo=False, future=True, pool_pre_ping=True)
+SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, class_=Session)
+
+
+def get_db() -> Generator[Session, None, None]:
+    """FastAPI dependency that yields a database session."""
+
+    session: Session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@contextmanager
+def session_scope() -> Generator[Session, None, None]:
+    """Provide a transactional scope around a series of operations."""
+
+    session: Session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:  # pragma: no cover - defensive rollback
+        session.rollback()
+        raise
+    finally:
+        session.close()

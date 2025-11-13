@@ -1,24 +1,101 @@
-from fastapi import FastAPI, Response, Request
+"""FastAPI application entrypoint for the C2C backend."""
+from __future__ import annotations
 
-app = FastAPI(title="C2C Backend")
+import time
+from datetime import datetime, timezone
+from typing import Callable
 
-@app.middleware("http")
-async def auto_head(request: Request, call_next):
-    # 如果是 HEAD 并且 GET 存在，则临时改为 GET 执行，再返回无正文响应（不要留下 content-length）
-    if request.method == "HEAD":
-        request.scope["method"] = "GET"
-        response = await call_next(request)
-        headers = dict(response.headers)
-        headers.pop("content-length", None)
-        return Response(content=b"", status_code=response.status_code, headers=headers, media_type=response.media_type)
-    return await call_next(request)
+from fastapi import FastAPI, Request, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, RedirectResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.common.exceptions import AppError, register_app_error_handler
+from app.config import get_settings
+
+settings = get_settings()
+start_time = time.monotonic()
 
 
-@app.get("/health")
-def health():
-    return {"ok": True}
+class HeadRewriteMiddleware(BaseHTTPMiddleware):
+    """Translate HEAD requests into GET requests while returning an empty body."""
 
-@app.get("/")
-def root():
-    return {"status": "ok", "see": ["/health", "/docs"]}
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
+        if request.method == "HEAD":
+            request.scope["method"] = "GET"
+            response = await call_next(request)
+            response.body = b""
+            response.headers["content-length"] = "0"
+            return response
+        return await call_next(request)
+
+
+def create_app() -> FastAPI:
+    """Application factory used by tests and production."""
+
+    app = FastAPI(title=settings.app_name, version="0.1.0")
+
+    app.add_middleware(HeadRewriteMiddleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/", tags=["meta"], response_class=RedirectResponse)
+    def index() -> RedirectResponse:  # pragma: no cover - trivial redirect
+        """Redirect root path to Swagger documentation."""
+
+        return RedirectResponse(url="/docs")
+
+    @app.get("/health", tags=["meta"], summary="Health check")
+    def health() -> dict[str, object]:
+        """Simple liveliness probe reporting uptime and environment."""
+
+        uptime_seconds = time.monotonic() - start_time
+        return {
+            "ok": True,
+            "env": settings.app_env,
+            "uptime": round(uptime_seconds, 2),
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        }
+
+    from app.routers import (  # pylint: disable=import-outside-toplevel
+        admin,
+        audit,
+        auth,
+        deals,
+        health as health_router,
+        membership,
+        products,
+        promotions,
+    )
+
+    app.include_router(health_router.router, prefix="/api")
+    app.include_router(auth.router, prefix="/api")
+    app.include_router(products.router, prefix="/api")
+    app.include_router(deals.router, prefix="/api")
+    app.include_router(promotions.router, prefix="/api")
+    app.include_router(membership.router, prefix="/api")
+    app.include_router(admin.router, prefix="/api")
+    app.include_router(audit.router, prefix="/api")
+
+    register_app_error_handler(app)
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        _: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={"detail": exc.errors(), "message": "Validation failed"},
+        )
+
+    return app
+
+
+app = create_app()
 
