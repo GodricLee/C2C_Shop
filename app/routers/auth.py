@@ -91,7 +91,12 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> LoginFlowResp
         )
     )
     db.commit()
-    return LoginFlowResponse.from_orm(flow)
+    return LoginFlowResponse(
+        flow_id=flow.flow_id,
+        channel=flow.channel,
+        expires_at=flow.expires_at,
+        debug_code=getattr(flow, "debug_code", None),
+    )
 
 
 @router.post("/verify-2fa", response_model=TokenResponse)

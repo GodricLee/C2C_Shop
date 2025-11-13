@@ -1,6 +1,7 @@
 """Authentication helpers for login and 2FA workflows."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Tuple
@@ -17,6 +18,9 @@ from app.security.jwt import create_access_token
 from app.security.twofa_transport import transport
 
 
+uvicorn_logger = logging.getLogger("uvicorn.error")
+
+
 @dataclass(slots=True)
 class LoginFlow:
     """Represents an in-progress 2FA verification flow."""
@@ -28,6 +32,7 @@ class LoginFlow:
     expires_at: datetime
     device_info: Optional[str]
     ip_address: Optional[str]
+    debug_code: Optional[str] = None
 
     @property
     def is_expired(self) -> bool:
@@ -70,6 +75,16 @@ def initiate_login_flow(
 
     code = transport.send_code(user_id=user.id, channel=chosen_channel)
     expires_at = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
+    debug_code = None
+    if settings.app_env != "prod":  # expose code only in non-production environments
+        debug_code = code
+        uvicorn_logger.info(
+            "[2FA] env=%s user_id=%s channel=%s code=%s",
+            settings.app_env,
+            user.id,
+            chosen_channel.value,
+            debug_code,
+        )
     flow = LoginFlow(
         flow_id=str(uuid4()),
         user_id=user.id,
@@ -78,6 +93,7 @@ def initiate_login_flow(
         expires_at=expires_at,
         device_info=device_info,
         ip_address=ip_address,
+        debug_code=debug_code,
     )
     _flows[flow.flow_id] = flow
     return flow

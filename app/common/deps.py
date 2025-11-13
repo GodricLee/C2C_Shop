@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Annotated
-
-from fastapi import Depends, Header
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.common.exceptions import AppError
@@ -13,7 +12,7 @@ from app.models.user import Session as SessionModel
 from app.models.user import User, UserStatus
 from app.security.jwt import decode_access_token
 
-AuthHeader = Annotated[str | None, Header(alias="Authorization")]
+security_scheme = HTTPBearer(auto_error=False)
 
 
 def get_session(db: Session, session_id: int) -> SessionModel:
@@ -24,24 +23,24 @@ def get_session(db: Session, session_id: int) -> SessionModel:
 
 
 def get_current_user(
-    authorization: AuthHeader,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
     db: Session = Depends(get_db),
 ) -> User:
     """Resolve the current user from the Authorization header."""
 
-    if not authorization:
+    if credentials is None:
         raise AppError(401, "Missing authorization header")
-    if not authorization.startswith("Bearer "):
-        raise AppError(401, "Invalid authorization header")
-
-    token = authorization.split(" ", 1)[1]
+    token = credentials.credentials
     payload = decode_access_token(token)
     user_id = int(payload["sub"])
     session_id = int(payload["sid"])
     session = get_session(db, session_id=session_id)
     if session.revoked:
         raise AppError(401, "Session revoked")
-    if session.expires_at <= datetime.now(tz=timezone.utc):
+    expires_at = session.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at <= datetime.now(tz=timezone.utc):
         raise AppError(401, "Session expired")
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:

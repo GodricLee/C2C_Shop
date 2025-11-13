@@ -3,13 +3,10 @@ from __future__ import annotations
 
 import time
 from datetime import datetime, timezone
-from typing import Callable
-
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.common.exceptions import AppError, register_app_error_handler
 from app.config import get_settings
@@ -18,25 +15,12 @@ settings = get_settings()
 start_time = time.monotonic()
 
 
-class HeadRewriteMiddleware(BaseHTTPMiddleware):
-    """Translate HEAD requests into GET requests while returning an empty body."""
-
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
-        if request.method == "HEAD":
-            request.scope["method"] = "GET"
-            response = await call_next(request)
-            response.body = b""
-            response.headers["content-length"] = "0"
-            return response
-        return await call_next(request)
-
 
 def create_app() -> FastAPI:
     """Application factory used by tests and production."""
 
     app = FastAPI(title=settings.app_name, version="0.1.0")
 
-    app.add_middleware(HeadRewriteMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

@@ -33,28 +33,16 @@ def search_products(db: Session, query: str, limit: int = 20, offset: int = 0) -
     """Search published products using expanded term list."""
 
     terms = expand_terms(db, query)
-    if not terms:
-        stmt = (
-            select(Product)
-            .where(Product.status == ProductStatus.PUBLISHED)
-            .order_by(Product.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
-    return db.execute(stmt).scalars().all()
+    base_query = select(Product).where(Product.status == ProductStatus.PUBLISHED)
 
-    like_clauses = []
-    for term in terms:
-        pattern = f"%{term}%"
-        like_clauses.append(Product.title.ilike(pattern))
-        like_clauses.append(Product.description.ilike(pattern))
+    if terms:
+        like_clauses = []
+        for term in terms:
+            pattern = f"%{term}%"
+            like_clauses.append(Product.title.ilike(pattern))
+            like_clauses.append(Product.description.ilike(pattern))
+        if like_clauses:
+            base_query = base_query.where(or_(*like_clauses))
 
-    stmt = (
-        select(Product)
-        .where(Product.status == ProductStatus.PUBLISHED)
-        .where(or_(*like_clauses))
-        .order_by(Product.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
+    stmt = base_query.order_by(Product.created_at.desc()).offset(offset).limit(limit)
     return db.execute(stmt).scalars().all()

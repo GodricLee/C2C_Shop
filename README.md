@@ -30,6 +30,7 @@ FastAPI-based backend implementing the Experiment 2 design for a C2C second-hand
 3. **Database**
    ```bash
    python -m scripts.create_tables
+   python -m scripts.upgrade_schema
    python -m scripts.seed_demo
    ```
 

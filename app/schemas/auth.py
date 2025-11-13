@@ -22,6 +22,10 @@ class LoginFlowResponse(APIModel):
     flow_id: str
     channel: TwoFAMethodType
     expires_at: datetime
+    debug_code: Optional[str] = Field(
+        default=None,
+        description="Development-only helper exposing the 2FA code when available.",
+    )
 
 
 class Verify2FARequest(BaseModel):
