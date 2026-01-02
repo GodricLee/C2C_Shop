@@ -47,7 +47,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov httpx
+        pip install pytest pytest-cov httpx hypothesis
 
     # 步骤5：运行代码质量检查（可选）
     - name: Run linting (optional)
