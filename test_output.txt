@@ -1,0 +1,92 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.0.1, pluggy-1.6.0
+rootdir: /home/Retr28/c2c_shop/backend
+configfile: pyproject.toml
+plugins: hypothesis-6.148.9, anyio-4.11.0, cov-7.0.0
+collected 73 items
+
+tests/test_admin_promotions.py ..                                        [  2%]
+tests/test_deals_flow.py ....                                            [  8%]
+tests/test_discount_engine.py ...                                        [ 12%]
+tests/test_discount_engine_extended.py ..................                [ 36%]
+tests/test_fuzzing_hypothesis.py ..........                              [ 50%]
+tests/test_health.py .                                                   [ 52%]
+tests/test_integration_flows.py ....                                     [ 57%]
+tests/test_membership.py .                                               [ 58%]
+tests/test_products.py ...                                               [ 63%]
+tests/test_products_crud.py .                                            [ 64%]
+tests/test_search_service.py ..........................                  [100%]
+
+=============================== warnings summary ===============================
+../../anaconda3/envs/c2cshop/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /home/Retr28/anaconda3/envs/c2cshop/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+tests/test_admin_promotions.py: 2 warnings
+tests/test_deals_flow.py: 4 warnings
+tests/test_health.py: 1 warning
+tests/test_integration_flows.py: 4 warnings
+tests/test_membership.py: 1 warning
+tests/test_products.py: 3 warnings
+tests/test_products_crud.py: 1 warning
+tests/test_search_service.py: 20 warnings
+  /home/Retr28/c2c_shop/backend/tests/conftest.py:52: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: admin_config, parameter_sets; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    Base.metadata.drop_all(bind=engine)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.11.14-final-0 _______________
+
+Name                              Stmts   Miss  Cover   Missing
+---------------------------------------------------------------
+app/__init__.py                       2      0   100%
+app/common/deps.py                   42     25    40%   19-22, 31-50, 61
+app/common/exceptions.py             21      2    90%   22, 41
+app/common/pagination.py             11      0   100%
+app/common/serialization.py          19      2    89%   16, 22
+app/config.py                        38      5    87%   45, 51, 55-57
+app/db.py                            22      9    59%   25-29, 36-44
+app/main.py                          33      1    97%   76
+app/models/__init__.py                2      0   100%
+app/models/admin_config.py           14      0   100%
+app/models/audit_log.py              18      0   100%
+app/models/cashback.py               15      0   100%
+app/models/coupon.py                 41      0   100%
+app/models/deal.py                   27      0   100%
+app/models/membership.py             19      0   100%
+app/models/parameter_set.py          33      0   100%
+app/models/product.py                28      0   100%
+app/models/synonym.py                 9      0   100%
+app/models/tag.py                    33      0   100%
+app/models/user.py                   77      0   100%
+app/routers/__init__.py               2      0   100%
+app/routers/admin.py                133     80    40%   34-36, 74-76, 85-124, 134-154, 163-185, 190-192, 203-225, 235-241, 251-257, 267-288
+app/routers/audit.py                 30     16    47%   31-47
+app/routers/auth.py                  54     30    44%   34-64, 71-94, 106-117, 131-146
+app/routers/deals.py                 91     11    88%   38, 40, 75, 77, 79, 83, 89, 100, 112, 136, 177
+app/routers/health.py                12      2    83%   20-21
+app/routers/membership.py            31      0   100%
+app/routers/products.py              91      6    93%   90, 103, 133, 135, 159, 161
+app/routers/promotions.py            52      3    94%   52, 88, 99
+app/schemas/admin.py                 31      0   100%
+app/schemas/auth.py                  26      0   100%
+app/schemas/cashback.py              10      0   100%
+app/schemas/common.py                20      0   100%
+app/schemas/coupon.py                36      0   100%
+app/schemas/deal.py                  21      0   100%
+app/schemas/membership.py            14      0   100%
+app/schemas/product.py               32      0   100%
+app/schemas/tag.py                   19      0   100%
+app/schemas/user.py                  25      0   100%
+app/security/__init__.py              0      0   100%
+app/security/auth.py                 73     41    44%   39, 48-53, 64-99, 105-126, 132-136
+app/security/hashing.py               7      1    86%   19
+app/security/jwt.py                  20     13    35%   15-23, 32-46
+app/security/twofa_transport.py      46     22    52%   22, 29, 32, 45-50, 53-72
+app/services/discount_engine.py      35      6    83%   47, 49, 51, 62, 78-79
+app/services/price_policy.py         15      2    87%   19, 23
+app/services/risk_engine.py          32     17    47%   35-79
+app/services/search.py               31      0   100%
+---------------------------------------------------------------
+TOTAL                              1493    294    80%
+======================= 73 passed, 37 warnings in 11.53s =======================
