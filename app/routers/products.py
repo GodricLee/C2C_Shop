@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -122,7 +122,7 @@ def update_product(
     return ProductOut.from_orm(product)
 
 
-@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def delete_product(
     product_id: int,
     current_user: User = Depends(get_current_user),
