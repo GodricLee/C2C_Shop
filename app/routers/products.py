@@ -127,7 +127,7 @@ def delete_product(
     product_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> None:
+):
     product = db.query(Product).filter(Product.id == product_id).first()
     if product is None:
         raise AppError(404, "Product not found")
