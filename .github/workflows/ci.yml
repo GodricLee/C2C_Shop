@@ -1,0 +1,102 @@
+# 工作流名称：C2C Shop Backend CI
+# 该工作流用于自动化测试 Python FastAPI 后端项目
+name: C2C Shop Backend CI
+
+# 触发条件：当代码推送到 main/master 分支或向这些分支发起 Pull Request 时触发
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+# 定义工作流中的任务
+jobs:
+  # 测试任务：运行单元测试和集成测试
+  test:
+    # 运行环境：最新版 Ubuntu
+    runs-on: ubuntu-latest
+    
+    # 定义测试策略：使用多个 Python 版本进行测试
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11']
+    
+    # 任务执行步骤
+    steps:
+    # 步骤1：检出代码仓库
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 步骤2：设置 Python 环境
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    # 步骤3：缓存 pip 依赖以加速构建
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    # 步骤4：安装项目依赖
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov httpx
+
+    # 步骤5：运行代码质量检查（可选）
+    - name: Run linting (optional)
+      run: |
+        pip install flake8
+        # 仅检查语法错误和未定义变量，不阻止构建
+        flake8 app --count --select=E9,F63,F7,F82 --show-source --statistics || true
+      continue-on-error: true
+
+    # 步骤6：运行单元测试并生成覆盖率报告
+    - name: Run tests with pytest
+      env:
+        # 设置测试环境变量
+        DB_URL: sqlite+pysqlite:///:memory:
+        JWT_SECRET: test-jwt-secret-for-ci
+        TWOFA_CHANNELS: email
+      run: |
+        pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
+
+    # 步骤7：上传覆盖率报告（可选）
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-${{ matrix.python-version }}
+        path: coverage.xml
+      if: always()
+
+  # 代码质量检查任务
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install linting tools
+      run: |
+        pip install flake8 black isort
+
+    - name: Check code formatting with black
+      run: |
+        black --check app tests || echo "Code formatting issues found"
+      continue-on-error: true
+
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only app tests || echo "Import sorting issues found"
+      continue-on-error: true
